@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Audio Studio Pro | DSP & Spatial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Modern System Font Stack for Offline Compatibility */
+        :root {
+            --accent: #a78bfa;
+            --accent-glow: rgba(167, 139, 250, 0.4);
+            --bg-dark: #050508;
+            --surface: rgba(15, 15, 25, 0.7);
+            --scrollbar-bg: rgba(255, 255, 255, 0.03);
+            --scrollbar-thumb: rgba(167, 139, 250, 0.3);
+            --scrollbar-thumb-hover: rgba(167, 139, 250, 0.6);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-dark);
+            color: #e2e8f0;
+            overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 0% 0%, rgba(167, 139, 250, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 100% 100%, rgba(167, 139, 250, 0.08) 0%, transparent 40%);
+        }
+
+        /* --- Aesthetic Scrollbar Styling --- */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--scrollbar-bg);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 10px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+            transition: all 0.3s ease;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--scrollbar-thumb-hover);
+            border: 1px solid transparent;
+            background-clip: padding-box;
+        }
+
+        /* Firefox Support */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-bg);
+        }
+
+        .glass-panel {
+            background: var(--surface);
+            backdrop-filter: blur(24px) saturate(200%);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .pro-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .pro-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--accent);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px -12px rgba(0,0,0,0.5);
+        }
+
+        .pro-card.active {
+            background: linear-gradient(145deg, rgba(167, 139, 250, 0.1), rgba(167, 139, 250, 0.02));
+            border-color: var(--accent);
+            box-shadow: 0 0 30px rgba(167, 139, 250, 0.15);
+        }
+
+        .visualizer-bar {
+            width: 5px;
+            border-radius: 4px 4px 0 0;
+            background: linear-gradient(to top, var(--accent), #d8b4fe);
+            transition: height 0.08s ease;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.1);
+            height: 4px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .mono { font-family: 'JetBrains Mono', 'Menlo', 'Monaco', 'Cascadia Code', monospace; }
+
+        .btn-toggle.active {
+            background: var(--accent);
+            color: black;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+        .animate-pulse-soft { animation: pulse-soft 2s infinite; }
+    </style>
+</head>
+<body class="h-screen flex flex-col selection:bg-violet-500/30">
+
+    <!-- Top Navigation -->
+    <header class="h-20 flex items-center justify-between px-10 border-b border-white/5 glass-panel z-50 shrink-0">
+        <div class="flex items-center gap-5">
+            <div class="relative group">
+                <div class="absolute -inset-1 bg-violet-500 rounded-2xl blur opacity-25 group-hover:opacity-50 transition"></div>
+                <div class="relative w-11 h-11 bg-black rounded-2xl flex items-center justify-center border border-white/10">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-violet-400">
+                        <path d="M12 2v20M2 12h20M7 7l10 10M7 17L17 7"/>
+                    </svg>
+                </div>
+            </div>
+            <div>
+                <h1 class="text-xl font-extrabold tracking-tighter uppercase">Nexus <span class="text-violet-400">Studio</span></h1>
+                <div class="flex items-center gap-2">
+                    <span class="text-[9px] font-bold text-slate-500 tracking-[0.4em] uppercase">Pro Edition</span>
+                    <span class="w-1 h-1 rounded-full bg-green-500 animate-pulse"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-8">
+            <div class="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/5">
+                <button id="modeNormal" class="btn-toggle active px-6 py-2.5 text-[10px] font-bold rounded-xl transition-all">CORE</button>
+                <button id="mode3D" class="btn-toggle px-6 py-2.5 text-[10px] font-bold rounded-xl text-slate-400 transition-all">SPATIAL</button>
+            </div>
+
+            <div class="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/5">
+                <button id="bassBoostBtn" class="btn-toggle px-6 py-2.5 text-[10px] font-bold rounded-xl text-slate-400 transition-all">DEEP BASS</button>
+                <button id="autoplayBtn" class="btn-toggle px-6 py-2.5 text-[10px] font-bold rounded-xl text-slate-400 transition-all">AUTOPLAY</button>
+            </div>
+
+            <label class="cursor-pointer bg-white text-black px-8 py-3 rounded-2xl text-[10px] font-extrabold hover:bg-slate-200 transition-all active:scale-95 shadow-2xl">
+                + IMPORT MASTER
+                <input type="file" id="fileInput" class="hidden" accept="audio/*" multiple>
+            </label>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-72 border-r border-white/5 flex flex-col glass-panel shrink-0">
+            <div class="p-8 flex-1 flex flex-col min-h-0">
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-500">Workspace</h2>
+                    <button id="addLibrary" class="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 text-slate-400 hover:text-white hover:bg-violet-600 transition-all">+</button>
+                </div>
+                <nav id="libraryList" class="space-y-2 overflow-y-auto flex-1 pr-2">
+                    <!-- Dynamic Libraries -->
+                </nav>
+            </div>
+
+            <div class="mt-auto p-8 border-t border-white/5 space-y-8">
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        <span>Spatial Velocity</span>
+                        <span id="orbitVal" class="text-violet-400 mono">0.6x</span>
+                    </div>
+                    <input type="range" id="orbitSpeed" min="0.1" max="2" step="0.1" value="0.6" class="w-full">
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col relative overflow-hidden bg-[rgba(0,0,0,0.3)]">
+            <!-- Peak Visualizer -->
+            <div class="h-48 flex items-end justify-center gap-1 px-12 pb-8">
+                <div id="visualizer" class="flex items-end gap-1.5 w-full h-32 max-w-6xl">
+                    <!-- Bars injected by JS -->
+                </div>
+            </div>
+
+            <!-- List Header -->
+            <div class="px-12 py-4 flex items-center justify-between">
+                <div>
+                    <h2 id="libTitle" class="text-4xl font-extrabold tracking-tight">Main Vault</h2>
+                    <div id="trackCount" class="text-[10px] text-violet-400 font-bold uppercase tracking-[0.2em] mt-2 opacity-70">Initializing studio...</div>
+                </div>
+                <div class="relative">
+                    <input type="text" id="searchTracks" placeholder="Filter signal..." class="bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 py-4 text-xs focus:outline-none focus:border-violet-500/50 focus:bg-white/10 transition-all w-80">
+                    <svg class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                </div>
+            </div>
+
+            <!-- Scrollable Grid Area -->
+            <div class="flex-1 overflow-y-auto px-12 pb-40">
+                <div id="songGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 py-6">
+                    <!-- Cards -->
+                </div>
+            </div>
+
+            <!-- Master Control Bar -->
+            <div class="absolute bottom-10 left-1/2 -translate-x-1/2 w-[94%] max-w-7xl h-28 glass-panel rounded-[2.5rem] flex items-center px-10 gap-10 shadow-[0_30px_90px_-15px_rgba(0,0,0,0.7)] z-50 border-white/10">
+                
+                <!-- Track Info -->
+                <div class="flex flex-col min-w-[200px] max-w-[280px]">
+                    <span id="nowPlayingTitle" class="text-sm font-extrabold truncate text-white">Standby</span>
+                    <span id="nowPlayingLib" class="text-[9px] text-violet-400 uppercase tracking-[0.25em] font-bold truncate mt-1.5">No Active Signal</span>
+                </div>
+
+                <!-- Transport -->
+                <div class="flex items-center gap-6">
+                    <button id="prevBtn" class="text-slate-500 hover:text-white transition-all"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="m19 20-12-8 12-8v16ZM5 19V5h2v14H5Z"/></svg></button>
+                    <button id="playToggle" class="w-16 h-16 bg-white text-black rounded-[1.5rem] flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-2xl">
+                        <svg id="playIcon" width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="m7 3 14 9-14 9V3z"/></svg>
+                    </button>
+                    <button id="nextBtn" class="text-slate-500 hover:text-white transition-all"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="m5 4 12 8-12 8V4Zm14 15V5h2v14h-2Z"/></svg></button>
+                </div>
+
+                <!-- Progress -->
+                <div class="flex-1 flex flex-col justify-center gap-3">
+                    <div class="flex items-center gap-6">
+                        <span id="timeCur" class="text-[10px] font-bold mono text-slate-500 w-12 text-right">00:00</span>
+                        <input type="range" id="progressBar" class="flex-1 accent-violet-400" value="0" min="0" max="100">
+                        <span id="timeTotal" class="text-[10px] font-bold mono text-slate-500 w-12">00:00</span>
+                    </div>
+                </div>
+
+                <!-- Volume -->
+                <div class="flex items-center gap-5 min-w-[160px] border-l border-white/5 pl-10">
+                    <svg class="text-slate-500" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                    <input type="range" id="volumeSlider" class="w-24 accent-white" min="0" max="1" step="0.01" value="0.7">
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Library Modal -->
+    <div id="libModal" class="fixed inset-0 bg-black/80 backdrop-blur-xl hidden z-[100] flex items-center justify-center p-6">
+        <div class="glass-panel p-12 rounded-[3rem] w-full max-w-md border-white/10 shadow-3xl">
+            <h3 class="text-2xl font-extrabold mb-2">New Collection</h3>
+            <p class="text-xs text-slate-400 mb-10">Define a new workspace for your master tracks.</p>
+            
+            <input type="text" id="libInput" placeholder="Collection Identifier..." class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm focus:outline-none focus:border-violet-500 mb-10 transition-all mono">
+            
+            <div class="flex gap-4">
+                <button id="closeModal" class="flex-1 px-4 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-white transition-colors">Abort</button>
+                <button id="confirmLib" class="flex-1 bg-violet-600 px-4 py-5 text-[10px] font-bold rounded-2xl uppercase tracking-widest hover:bg-violet-500 transition-all shadow-xl shadow-violet-600/20 active:scale-95">Initialize</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DB_NAME = "NexusProDB";
+        const DB_VERSION = 1;
+        let db;
+
+        let libraries = [{ id: 'default', name: 'Main Vault' }];
+        let currentLibraryId = 'default';
+        let tracks = [];
+        let isAutoplay = false;
+        let audioMode = 'normal';
+        let bassBoostActive = false;
+        
+        let audioCtx, sourceNode, gainNode, pannerNode, analyzer, bassFilter;
+        let currentTrack = null;
+        let isPlaying = false;
+        let startTime = 0;
+        let pausedAt = 0;
+        let audioBuffer = null;
+        let visualFrame;
+
+        async function init() {
+            db = await openDB();
+            await loadState();
+            renderLibraries();
+            renderTracks();
+            setupVisualizer();
+            setupEventListeners();
+            startOrbitLoop();
+        }
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('libraries')) db.createObjectStore('libraries', { keyPath: 'id' });
+                    if (!db.objectStoreNames.contains('tracks')) db.createObjectStore('tracks', { keyPath: 'id', autoIncrement: true });
+                };
+                request.onsuccess = (e) => resolve(e.target.result);
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function loadState() {
+            const tx = db.transaction(['libraries', 'tracks'], 'readonly');
+            libraries = await new Promise(r => tx.objectStore('libraries').getAll().onsuccess = e => r(e.target.result));
+            if (libraries.length === 0) {
+                libraries = [{ id: 'default', name: 'Main Vault' }];
+                const txSave = db.transaction('libraries', 'readwrite');
+                txSave.objectStore('libraries').add(libraries[0]);
+            }
+            tracks = await new Promise(r => tx.objectStore('tracks').getAll().onsuccess = e => r(e.target.result));
+        }
+
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            analyzer = audioCtx.createAnalyser();
+            analyzer.fftSize = 512;
+            
+            gainNode = audioCtx.createGain();
+            gainNode.gain.value = document.getElementById('volumeSlider').value;
+            
+            pannerNode = audioCtx.createPanner();
+            pannerNode.panningModel = 'HRTF';
+            
+            bassFilter = audioCtx.createBiquadFilter();
+            bassFilter.type = 'lowshelf';
+            bassFilter.frequency.value = 200;
+            bassFilter.gain.value = bassBoostActive ? 15 : 0;
+
+            updateAudioRouting();
+        }
+
+        function updateAudioRouting() {
+            if (!audioCtx) return;
+            analyzer.disconnect();
+            bassFilter.disconnect();
+            pannerNode.disconnect();
+            gainNode.disconnect();
+
+            analyzer.connect(bassFilter);
+            if (audioMode === '3d') {
+                bassFilter.connect(pannerNode);
+                pannerNode.connect(gainNode);
+            } else {
+                bassFilter.connect(gainNode);
+            }
+            gainNode.connect(audioCtx.destination);
+        }
+
+        async function playTrack(track, offset = 0) {
+            initAudio();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+            if (sourceNode) {
+                sourceNode.stop();
+                sourceNode.onended = null;
+            }
+
+            if (currentTrack?.id !== track.id || !audioBuffer) {
+                document.getElementById('nowPlayingTitle').innerText = "Decoding Signal...";
+                audioBuffer = await audioCtx.decodeAudioData(track.data.slice(0));
+            }
+
+            sourceNode = audioCtx.createBufferSource();
+            sourceNode.buffer = audioBuffer;
+            sourceNode.connect(analyzer);
+            
+            const finalOffset = Math.min(Math.max(0, offset), audioBuffer.duration);
+            sourceNode.start(0, finalOffset);
+            
+            startTime = audioCtx.currentTime - finalOffset;
+            currentTrack = track;
+            isPlaying = true;
+
+            sourceNode.onended = () => {
+                const now = audioCtx.currentTime - startTime;
+                if (isPlaying && now >= audioBuffer.duration - 0.1) {
+                    if (isAutoplay) handleNext();
+                    else setPlayState(false);
+                }
+            };
+
+            setPlayState(true);
+            updateUI();
+            startVisualizerLoop();
+        }
+
+        function setPlayState(playing) {
+            isPlaying = playing;
+            const icon = document.getElementById('playIcon');
+            icon.innerHTML = playing ? 
+                `<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>` : 
+                `<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="m7 3 14 9-14 9V3z"/></svg>`;
+        }
+
+        function handleToggle() {
+            if (!currentTrack) {
+                const libTracks = getFilteredTracks();
+                if (libTracks.length > 0) playTrack(libTracks[0]);
+                return;
+            }
+            if (isPlaying) {
+                pausedAt = audioCtx.currentTime - startTime;
+                sourceNode.stop();
+                isPlaying = false;
+                setPlayState(false);
+            } else {
+                playTrack(currentTrack, pausedAt);
+            }
+        }
+
+        function handleNext() {
+            const libTracks = getFilteredTracks();
+            if (libTracks.length === 0) return;
+            const idx = libTracks.findIndex(t => t.id === currentTrack?.id);
+            const nextIdx = (idx + 1) % libTracks.length;
+            playTrack(libTracks[nextIdx]);
+        }
+
+        function handlePrev() {
+            const libTracks = getFilteredTracks();
+            if (libTracks.length === 0) return;
+            const idx = libTracks.findIndex(t => t.id === currentTrack?.id);
+            const prevIdx = (idx - 1 + libTracks.length) % libTracks.length;
+            playTrack(libTracks[prevIdx]);
+        }
+
+        function getFilteredTracks() {
+            return tracks.filter(t => t.libraryId === currentLibraryId);
+        }
+
+        function renderLibraries() {
+            const list = document.getElementById('libraryList');
+            list.innerHTML = '';
+            libraries.forEach(lib => {
+                const btn = document.createElement('button');
+                const active = currentLibraryId === lib.id;
+                btn.className = `w-full text-left px-5 py-4 rounded-xl text-[10px] font-bold transition-all flex items-center justify-between group ${active ? 'bg-white/10 text-white border border-white/10' : 'text-slate-500 hover:text-slate-300'}`;
+                btn.innerHTML = `<span class="uppercase tracking-widest truncate">${lib.name}</span>
+                    ${lib.id !== 'default' ? `<span class="opacity-0 group-hover:opacity-100 text-red-400 delete-lib text-base" data-id="${lib.id}">×</span>` : ''}`;
+                btn.onclick = (e) => {
+                    if (e.target.classList.contains('delete-lib')) {
+                        deleteLibrary(lib.id);
+                    } else {
+                        currentLibraryId = lib.id;
+                        renderLibraries();
+                        renderTracks();
+                    }
+                };
+                list.appendChild(btn);
+            });
+            const activeLib = libraries.find(l => l.id === currentLibraryId);
+            document.getElementById('libTitle').innerText = activeLib?.name || 'Vault';
+        }
+
+        function renderTracks() {
+            const grid = document.getElementById('songGrid');
+            const search = document.getElementById('searchTracks').value.toLowerCase();
+            const filtered = getFilteredTracks().filter(t => t.name.toLowerCase().includes(search));
+            grid.innerHTML = '';
+            document.getElementById('trackCount').innerText = `${filtered.length} ACTIVE TRACKS DETECTED`;
+
+            filtered.forEach(track => {
+                const active = currentTrack?.id === track.id;
+                const card = document.createElement('div');
+                card.className = `pro-card p-6 rounded-[2rem] cursor-pointer group ${active ? 'active' : ''}`;
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-violet-600 group-hover:text-black transition-all">
+                            ${active && isPlaying ? '<span class="flex gap-0.5"><span class="w-1 h-3 bg-current animate-pulse"></span><span class="w-1 h-5 bg-current animate-pulse delay-75"></span><span class="w-1 h-3 bg-current animate-pulse delay-150"></span></span>' : '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="m7 3 14 9-14 9V3z"/></svg>'}
+                        </div>
+                        <button class="text-slate-600 hover:text-red-400 delete-track transition-colors" data-id="${track.id}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg></button>
+                    </div>
+                    <h4 class="text-xs font-bold truncate mb-2">${track.name}</h4>
+                    <div class="flex justify-between items-center opacity-50">
+                        <span class="text-[9px] mono">${(track.size / (1024*1024)).toFixed(2)}MB</span>
+                        <span class="text-[8px] font-black uppercase tracking-tighter">${active ? 'SYNCED' : 'CACHED'}</span>
+                    </div>`;
+                card.onclick = (e) => { if (!e.target.closest('.delete-track')) playTrack(track); };
+                card.querySelector('.delete-track').onclick = (e) => { e.stopPropagation(); deleteTrack(track.id); };
+                grid.appendChild(card);
+            });
+        }
+
+        function updateUI() {
+            if (!currentTrack || !audioBuffer) return;
+            document.getElementById('nowPlayingTitle').innerText = currentTrack.name;
+            const lib = libraries.find(l => l.id === currentTrack.libraryId);
+            document.getElementById('nowPlayingLib').innerText = lib ? lib.name : 'Unknown Workspace';
+            document.getElementById('timeTotal').innerText = formatTime(audioBuffer.duration);
+            document.getElementById('progressBar').max = audioBuffer.duration;
+            renderTracks();
+        }
+
+        function setupVisualizer() {
+            const container = document.getElementById('visualizer');
+            container.innerHTML = '';
+            for(let i=0; i<80; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'visualizer-bar';
+                bar.style.height = '4px';
+                bar.style.opacity = (0.2 + (Math.sin(i * 0.1) * 0.2)).toFixed(2);
+                container.appendChild(bar);
+            }
+        }
+
+        function startVisualizerLoop() {
+            if (visualFrame) cancelAnimationFrame(visualFrame);
+            const bars = document.querySelectorAll('.visualizer-bar');
+            const data = new Uint8Array(analyzer.frequencyBinCount);
+            
+            function draw() {
+                visualFrame = requestAnimationFrame(draw);
+                if (isPlaying && analyzer) {
+                    analyzer.getByteFrequencyData(data);
+                    bars.forEach((bar, i) => {
+                        const val = data[i % 128];
+                        const h = (val / 255) * 100;
+                        bar.style.height = `${Math.max(4, h)}%`;
+                        bar.style.opacity = 0.4 + (h / 150);
+                    });
+
+                    const cur = audioCtx.currentTime - startTime;
+                    document.getElementById('timeCur').innerText = formatTime(cur);
+                    document.getElementById('progressBar').value = cur;
+                }
+            }
+            draw();
+        }
+
+        function startOrbitLoop() {
+            setInterval(() => {
+                if (isPlaying && audioCtx && audioMode === '3d' && pannerNode) {
+                    const speed = parseFloat(document.getElementById('orbitSpeed').value);
+                    const time = audioCtx.currentTime * speed;
+                    pannerNode.positionX.setTargetAtTime(Math.sin(time) * 4, audioCtx.currentTime, 0.1);
+                    pannerNode.positionZ.setTargetAtTime(Math.cos(time) * 4, audioCtx.currentTime, 0.1);
+                }
+            }, 60);
+        }
+
+        async function deleteTrack(id) {
+            if (currentTrack?.id === id) {
+                if (sourceNode) sourceNode.stop();
+                currentTrack = null;
+                isPlaying = false;
+                setPlayState(false);
+            }
+            const tx = db.transaction('tracks', 'readwrite');
+            tx.objectStore('tracks').delete(id);
+            tracks = tracks.filter(t => t.id !== id);
+            renderTracks();
+        }
+
+        async function deleteLibrary(id) {
+            const tx = db.transaction(['libraries', 'tracks'], 'readwrite');
+            tx.objectStore('libraries').delete(id);
+            tracks.forEach(t => {
+                if (t.libraryId === id) {
+                    t.libraryId = 'default';
+                    tx.objectStore('tracks').put(t);
+                }
+            });
+            libraries = libraries.filter(l => l.id !== id);
+            if (currentLibraryId === id) currentLibraryId = 'default';
+            renderLibraries();
+            renderTracks();
+        }
+
+        function formatTime(s) {
+            if (isNaN(s)) return "00:00";
+            const m = Math.floor(s / 60);
+            const sec = Math.floor(s % 60);
+            return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+        }
+
+        function setupEventListeners() {
+            document.getElementById('fileInput').onchange = async (e) => {
+                const files = Array.from(e.target.files);
+                for (const file of files) {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const tx = db.transaction('tracks', 'readwrite');
+                    const track = { name: file.name, size: file.size, data: arrayBuffer, libraryId: currentLibraryId, added: Date.now() };
+                    const req = tx.objectStore('tracks').add(track);
+                    req.onsuccess = (ev) => { 
+                        track.id = ev.target.result; 
+                        tracks.push(track); 
+                        renderTracks(); 
+                    };
+                }
+                e.target.value = '';
+            };
+
+            document.getElementById('modeNormal').onclick = () => {
+                audioMode = 'normal';
+                document.getElementById('modeNormal').classList.add('active');
+                document.getElementById('mode3D').classList.remove('active');
+                updateAudioRouting();
+            };
+
+            document.getElementById('mode3D').onclick = () => {
+                audioMode = '3d';
+                document.getElementById('mode3D').classList.add('active');
+                document.getElementById('modeNormal').classList.remove('active');
+                updateAudioRouting();
+            };
+
+            document.getElementById('bassBoostBtn').onclick = () => {
+                bassBoostActive = !bassBoostActive;
+                document.getElementById('bassBoostBtn').classList.toggle('active', bassBoostActive);
+                if (bassFilter) {
+                    bassFilter.gain.setTargetAtTime(bassBoostActive ? 15 : 0, audioCtx.currentTime, 0.2);
+                }
+            };
+
+            document.getElementById('autoplayBtn').onclick = () => {
+                isAutoplay = !isAutoplay;
+                document.getElementById('autoplayBtn').classList.toggle('active', isAutoplay);
+            };
+
+            document.getElementById('playToggle').onclick = handleToggle;
+            document.getElementById('nextBtn').onclick = handleNext;
+            document.getElementById('prevBtn').onclick = handlePrev;
+
+            document.getElementById('volumeSlider').oninput = (e) => {
+                if (gainNode) gainNode.gain.setTargetAtTime(e.target.value, audioCtx.currentTime, 0.05);
+            };
+
+            document.getElementById('progressBar').onchange = (e) => {
+                if (!currentTrack) return;
+                pausedAt = parseFloat(e.target.value);
+                if (isPlaying) playTrack(currentTrack, pausedAt);
+            };
+
+            document.getElementById('orbitSpeed').oninput = (e) => {
+                document.getElementById('orbitVal').innerText = e.target.value + 'x';
+            };
+
+            document.getElementById('searchTracks').oninput = renderTracks;
+
+            const modal = document.getElementById('libModal');
+            document.getElementById('addLibrary').onclick = () => modal.classList.remove('hidden');
+            document.getElementById('closeModal').onclick = () => modal.classList.add('hidden');
+            document.getElementById('confirmLib').onclick = () => {
+                const name = document.getElementById('libInput').value.trim();
+                if (name) {
+                    const newLib = { id: 'lib_' + Date.now(), name };
+                    libraries.push(newLib);
+                    db.transaction('libraries', 'readwrite').objectStore('libraries').add(newLib);
+                    renderLibraries();
+                    modal.classList.add('hidden');
+                    document.getElementById('libInput').value = '';
+                }
+            };
+        }
+
+        init();
+    </script>
+</body>
+</html>
